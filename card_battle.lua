@@ -43,21 +43,21 @@ function _init()
 			local disp = nums[i]
 			
 			local card = {
-			 hp=i,
-			 cost=log2(i)+1,
-			 att=i,
-			 suit=suit,
-			 play_after=function(s,spot)end,
-			 attack=function(s,spot)
-			 	spot.card.hurt(spot.card,s.att)
-			 end,
-			 hurt=function(s,amt)
-			 	s.hp -= amt
-			 	if s.hp <= 0 then
-			 		s.dead = true
-			 	end
-			 end,
-			 dead = false
+                hp=i,
+                cost=log2(i)+1,
+                att=i,
+                suit=suit,
+                play_after=function(s,spot)end,
+                attack=function(s,spot)
+                    spot.card.hurt(spot.card,s.att)
+                end,
+                hurt=function(s,amt)
+                    s.hp -= amt
+                    if s.hp <= 0 then
+                        s.dead = true
+                    end
+                end,
+                dead = false
 			}
 			
 			subclass=suit_classes[suit]
@@ -90,7 +90,7 @@ function deal(hand,deck,amt)
 	if(not amt) amt=5
 	
 	for i=1,amt do
-	 card = deck[flr(rnd(#deck))+1]
+		card = deck[flr(rnd(#deck))+1]
 		add(hand, card)
 		del(deck, card)
 	end
@@ -106,45 +106,45 @@ end
 
 --helpers
 function log10(n)
-  if (n <= 0) return nil
-  local f, t = 0, 0
-  while n < 0.5 do
-    n *= 2.71828
-    t -= 1
-  end
-  while n > 1.5 do
-    n /= 2.71828
-    t += 1
-  end
+	if (n <= 0) return nil
+	local f, t = 0, 0
+	while n < 0.5 do
+		n *= 2.71828
+		t -= 1
+	end
+	while n > 1.5 do
+		n /= 2.71828
+		t += 1
+	end
 	
-  n -= 1
-  for i = 9, 1, -1 do
-    f = n*(1/i - f)
-  end
-  t += f
-  -- to change base, change the
-  -- divisor below to ln(base)
-  return t / 2.30259
+	n -= 1
+	for i = 9, 1, -1 do
+		f = n*(1/i - f)
+	end
+	t += f
+	-- to change base, change the
+	-- divisor below to ln(base)
+	return t / 2.30259
 end
 
 function log2(n)
-  if (n <= 0) return nil
-  local f, t = 0, 0
-  while n < 0.5 do
-    n *= 2.71828
-    t -= 1
-  end
-  while n > 1.5 do
-    n /= 2.71828
-    t += 1
-  end
+	if (n <= 0) return nil
+	local f, t = 0, 0
+	while n < 0.5 do
+		n *= 2.71828
+		t -= 1
+	end
+	while n > 1.5 do
+		n /= 2.71828
+		t += 1
+	end
 	
-  n -= 1
-  for i = 9, 1, -1 do
-    f = n*(1/i - f)
-  end
-  t += f
-  -- to change base, change the
-  -- divisor below to ln(base)
-  return t / 0.693147
+	n -= 1
+	for i = 9, 1, -1 do
+		f = n*(1/i - f)
+	end
+	t += f
+	-- to change base, change the
+	-- divisor below to ln(base)
+	return t / 0.693147
 end
