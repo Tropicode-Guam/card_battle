@@ -36,12 +36,22 @@ function _init()
 	nums={'a',2,3,4,5,6,7,8,9,10,'j','q','k'}
 	
 	suit_options={'clubs','spades','diamonds','hearts'}
-	
+
+	local jqk={'j','q','k'}
+	local chosen_jqk={}
+	for disp in all(jqk) do
+		local suit = suit_options[flr(rnd(#suit_options))+1]
+		chosen_jqk[disp] = suit
+	end
+ 
 	deck = {}
 	for suit in all(suit_options) do
 		for i=1,#nums do
 			local disp = nums[i]
-			
+			if chosen_jqk[disp] and chosen_jqk[disp] != suit then
+				goto continue
+			end
+
 			local card = {
                 hp=i,
                 cost=log2(i)+1,
@@ -66,6 +76,10 @@ function _init()
 			end
 			
 			add(deck,card)
+
+			-- goto / continue label
+			-- since lua has no continue keyword
+			::continue::
 		end
 	end
 	
@@ -74,10 +88,6 @@ function _init()
 	for card in all(deck) do
 		add(cards,card)
 	end
-	
-	
-	-- todo: remove extra j/q/k from deck here
-	
 	
 	phand={}
 	ehand={}
