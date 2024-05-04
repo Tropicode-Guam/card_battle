@@ -36,6 +36,18 @@ function _init()
 	nums={'a',2,3,4,5,6,7,8,9,10,'j','q','k'}
 	
 	suit_options={'clubs','spades','diamonds','hearts'}
+	local colors={
+		clubs=0,
+		spades=0,
+		diamonds=8,
+		hearts=8
+	}
+	local sprs={
+		hearts=1,
+		diamonds=2,
+		spades=3,
+		clubs=4
+	}
 
 	local jqk={'j','q','k'}
 	local chosen_jqk={}
@@ -53,6 +65,9 @@ function _init()
 			end
 
 			local card = {
+				disp=disp,
+				color=colors[suit],
+				spr=sprs[suit],
                 hp=i,
                 cost=log2(i)+1,
                 att=i,
@@ -94,6 +109,9 @@ function _init()
 	
 	deal(phand,deck)
 	deal(ehand,deck)
+
+	palt(0,false)
+	palt(7,true)
 end
 
 function deal(hand,deck,amt)
@@ -112,6 +130,30 @@ function mulligan(hand,deck)
 		del(hand, card)
 	end
 	deal(hand,deck)
+end
+
+
+function _update()
+	if btnp(❎) then
+		mulligan(phand,deck)
+	end
+end
+
+function _draw()
+	cls(7)
+	i = 0
+	pad = 8
+	cardw = 16
+	for card in all(phand) do
+		x = 64-(cardw*#phand+pad*(#phand-1))/2 + cardw*i + pad*i
+		print(card.disp,
+			x,
+			100,
+			card.color
+		)
+		spr(card.spr,x+8,100)
+		i += 1
+	end
 end
 
 --helpers
