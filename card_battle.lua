@@ -89,10 +89,6 @@ function _init()
 		add(cards,card)
 	end
 	
-	
-	-- todo: remove extra j/q/k from deck here
-	
-	
 	phand={}
 	ehand={}
 	
