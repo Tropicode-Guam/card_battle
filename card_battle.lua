@@ -143,15 +143,16 @@ function _draw()
 	cls(7)
 	i = 0
 	pad = 8
-	cardw = 16
+	cardw = 8
 	for card in all(phand) do
 		x = 64-(cardw*#phand+pad*(#phand-1))/2 + cardw*i + pad*i
+		off = card.disp == 10 and -1 or 1
 		print(card.disp,
-			x,
+			x+off,
 			100,
 			card.color
 		)
-		spr(card.spr,x+8,100)
+		spr(card.spr,x,100+7)
 		i += 1
 	end
 end
