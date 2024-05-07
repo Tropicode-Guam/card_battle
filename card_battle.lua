@@ -143,16 +143,17 @@ function _draw()
 	cls(7)
 	i = 0
 	pad = 8
-	cardw = 8
+	cardw = 11
 	for card in all(phand) do
-		x = 64-(cardw*#phand+pad*(#phand-1))/2 + cardw*i + pad*i
-		off = card.disp == 10 and -1 or 1
+		x = flr(64-(cardw*#phand+pad*(#phand-1))/2 + cardw*i + pad*i)+.5
+		off = card.disp == 10 and -3 or 1
 		print(card.disp,
-			x+off,
+			x+off+cardw-5,
 			100,
 			card.color
 		)
-		spr(card.spr,x,100+7)
+		spr(card.spr,x+2,100+7)
+		rect(x,100-2,x+cardw,100+13,5)
 		i += 1
 	end
 end
