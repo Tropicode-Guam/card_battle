@@ -56,7 +56,10 @@ function _init()
 		chosen_jqk[disp] = suit
 	end
  
-	deck = {}
+	deck = {
+		cards={},
+		pos={x=100,y=64}
+	}
 	for suit in all(suit_options) do
 		for i=1,#nums do
 			local disp = nums[i]
@@ -90,7 +93,7 @@ function _init()
 				card[fname] = func
 			end
 			
-			add(deck,card)
+			add(deck.cards,card)
 
 			-- goto / continue label
 			-- since lua has no continue keyword
@@ -100,10 +103,67 @@ function _init()
 	
 	-- saving a list of all cards
 	cards={}
-	for card in all(deck) do
+	for card in all(deck.cards) do
 		add(cards,card)
 	end
-	
+
+	clock={
+		ts={},
+		schedule=function(threshold,speed,action)
+			local ct = {
+				t=threshold,
+				threshold=threshold,
+				lt=0, -- lifetime (0-1)
+				speed=speed or 1,
+				done=false,
+				paused=false,
+				action=action
+			}
+			add(clock.ts, ct)
+			return ct
+		end,
+		update=function()
+			for c in all(clock.ts) do
+				if not c.paused then
+					c.t = max(c.t - c.speed, 0)
+					c.lt = (c.threshold-c.t)/c.threshold
+					if c.t == 0 then
+						c.done = true
+						if c.action then
+							c.action()
+						end
+						del(clock.ts, c)
+					end
+				end
+			end
+		end
+	}
+	controller={
+		update=function()
+			local c = controller
+			if c.interactable() then
+				if btnp(❎) then
+					mulligan(phand,deck)
+				end
+			end
+		end,
+		interactable=function()
+			local c = controller
+			for ct in all(c.interrupts) do
+				if ct.done then
+					del(c.interrupts, ct)
+				else
+					return false
+				end
+			end
+			return true
+		end,
+		interrupts={},
+		interrupt=function(ct)
+			add(controller.interrupts, ct)
+		end
+	}
+
 	phand={}
 	ehand={}
 	
@@ -114,29 +174,53 @@ function _init()
 	palt(7,true)
 end
 
+function deal_card(card, hand, deck)
+	-- schedule animation here
+	add(hand, card)
+	del(deck.cards, card)
+end
+
 function deal(hand,deck,amt)
 	if(not amt) amt=5
 	
+	delay=0
 	for i=1,amt do
-		card = deck[flr(rnd(#deck))+1]
-		add(hand, card)
-		del(deck, card)
+		local card = deck.cards[flr(rnd(#deck.cards))+1]
+		clock.schedule(delay,1,function()
+			deal_card(card, hand, deck)
+		end)
+		delay+=5
 	end
+	local ct = clock.schedule(delay+1)
+	controller.interrupt(ct)
+end
+
+function discard(card, hand, deck)
+	-- schedule animation here
+	add(deck.cards, card)
+	del(hand, card)
 end
 
 function mulligan(hand,deck)
+	local delay = 0
 	for card in all(hand) do
-		add(deck, card)
-		del(hand, card)
+		clock.schedule(delay,1,function()
+			discard(card, hand, deck)
+		end)
+		delay += 5
 	end
-	deal(hand,deck)
+	local ct = clock.schedule(delay+1)
+	controller.interrupt(ct)
+
+	clock.schedule(delay,1,function()
+		deal(hand,deck)
+	end)
 end
 
 
 function _update()
-	if btnp(❎) then
-		mulligan(phand,deck)
-	end
+	clock.update()
+	controller.update()
 end
 
 function _draw()
