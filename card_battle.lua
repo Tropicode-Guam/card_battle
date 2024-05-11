@@ -1,3 +1,55 @@
+function init_hand(is_player, ncards)
+	ncards = ncards or 5
+	local pad = 8
+	local hand = {
+		is_player=is_player,
+		y=is_player and 100 or 27-cardh,
+		cards={},
+		discarding={}
+	}
+	hand.spot = function(i,hand_size)
+		hand_size=hand_size or #hand.cards
+		return {
+			x=flr(64-(cardw*hand_size+pad*(hand_size-1))/2 + cardw*i + pad*i)+.5,
+			y=hand.y
+		}
+	end
+	hand.add_card = function(card, ct)
+		local sz = #hand.cards + 1
+		local i=0
+		card.facedown = not hand.is_player
+		for c in all(hand.cards) do
+			move(c,hand.spot(i,sz),clock.schedule(ct.threshold*.2))
+			i+=1
+		end
+		move(card,hand.spot(i,sz),ct)
+		add(hand.cards,card)
+	end
+	hand.discard = function(card, ct, deck)
+		deck=deck or discard_deck
+		del(hand.cards,card)
+		card.facedown = true
+		add(hand.discarding, card)
+		clock.schedule(ct.threshold,1,function()del(hand.discarding,card)end)
+		add(deck.cards,card)
+		move(card,deck,ct)
+		local i=1
+		for c in all(hand.cards) do
+			move(c,hand.spot(i,#hand.cards+2),clock.schedule(ct.threshold*.2))
+			i+=1
+		end
+	end
+	hand.draw = function()
+		for card in all(hand.cards) do
+			card.draw()
+		end
+		for card in all(hand.discarding) do
+			card.draw()
+		end
+	end
+	return hand
+end
+
 function _init()
 	suit_classes={
 		diamonds={
@@ -56,9 +108,15 @@ function _init()
 		chosen_jqk[disp] = suit
 	end
  
+	cardw = 11
+	cardh = (13-2)
 	deck = {
 		cards={},
-		pos={x=100,y=64}
+		x=110,y=64-cardh/2
+	}
+	discard_deck = {
+		cards={},
+		x=17,y=64-cardh/2
 	}
 	for suit in all(suit_options) do
 		for i=1,#nums do
@@ -67,7 +125,9 @@ function _init()
 				goto continue
 			end
 
-			local card = {
+			local card = {}
+			card = {
+				x=deck.x,y=deck.y,w=cardw,
 				disp=disp,
 				color=colors[suit],
 				spr=sprs[suit],
@@ -85,7 +145,24 @@ function _init()
                         s.dead = true
                     end
                 end,
-                dead = false
+                dead = false,
+				draw=function()
+					local s = card
+					if s.facedown then
+						rectfill(s.x,s.y-2,s.x+cardw,s.y+13,5)
+						rectfill(s.x+1,s.y-1,s.x+cardw-1,s.y+12,8)
+						rect(s.x+2,s.y,s.x+cardw-2,s.y+11,5)
+					else
+						rectfill(s.x,s.y-2,s.x+s.w,s.y+13,7)
+						print(s.disp,
+							s.x+(s.disp == 10 and -3 or 1)+s.w-5,
+							s.y,
+							s.color
+						)
+						spr(s.spr,s.x+2,s.y+7)
+						rect(s.x,s.y-2,s.x+s.w,s.y+13,5)
+					end
+				end
 			}
 			
 			subclass=suit_classes[suit]
@@ -164,8 +241,34 @@ function _init()
 		end
 	}
 
-	phand={}
-	ehand={}
+	-- animation controller
+	anim_cont = {
+		animations={},
+		-- clock handles this
+		-- update=function()
+		-- 	local c=anim_cont
+		-- end,
+		draw=function()
+			local c=anim_cont
+			for a in all(c.animations) do
+				a.draw(a)
+				if a.ct.done then
+					del(c.animations, a)
+				end
+			end
+		end,
+		animate=function(draw, ct)
+			local c=anim_cont
+			add(c.animations, {
+				draw=draw,
+				ct=ct
+			})
+		end
+	}
+
+
+	phand=init_hand(true)
+	ehand=init_hand(false)
 	
 	deal(phand,deck)
 	deal(ehand,deck)
@@ -174,49 +277,74 @@ function _init()
 	palt(7,true)
 end
 
-function deal_card(card, hand, deck)
+function deal_card(card, hand, deck, deal_time)
 	-- schedule animation here
-	add(hand, card)
-	del(deck.cards, card)
+	local ct = clock.schedule(deal_time,1, function()
+		-- del(deck.cards, card)
+	end)
+	hand.add_card(card,ct)
 end
 
 function deal(hand,deck,amt)
 	if(not amt) amt=5
 	
+	local deal_time = 5
 	delay=0
 	for i=1,amt do
 		local card = deck.cards[flr(rnd(#deck.cards))+1]
+		del(deck.cards, card)
 		clock.schedule(delay,1,function()
-			deal_card(card, hand, deck)
+			deal_card(card, hand, deck, deal_time)
 		end)
-		delay+=5
+		delay+=10
 	end
-	local ct = clock.schedule(delay+1)
+	local ct = clock.schedule(delay+deal_time)
 	controller.interrupt(ct)
 end
 
-function discard(card, hand, deck)
+function discard(card, hand, deck, deal_time)
 	-- schedule animation here
-	add(deck.cards, card)
-	del(hand, card)
+	local ct = clock.schedule(deal_time,1, function()
+		-- del(deck.cards, card)
+	end)
+	-- add(deck.cards, card)
+	hand.discard(card,ct,deck)
 end
 
-function mulligan(hand,deck)
+function mulligan(hand,deck, speed)
+	speed = speed or 2
 	local delay = 0
-	for card in all(hand) do
+	local deal_time = 5
+	for card in all(hand.cards) do
 		clock.schedule(delay,1,function()
-			discard(card, hand, deck)
+			discard(card, hand, deck, deal_time)
 		end)
-		delay += 5
+		delay += speed
 	end
-	local ct = clock.schedule(delay+1)
+	local ct = clock.schedule(delay+deal_time)
 	controller.interrupt(ct)
 
-	clock.schedule(delay,1,function()
+	clock.schedule(delay+deal_time+1,1,function()
 		deal(hand,deck)
 	end)
 end
 
+function lerp(a,b,t)
+	return b*t+a*(1-t)
+end
+
+function move(obj, target, ct, func)
+	func = func or function(t)
+		return t
+	end
+	local from = {x=obj.x,y=obj.y}
+	local to = {x=target.x,y=target.y}
+	local disp = obj.disp or ""
+	anim_cont.animate(function(a)
+		obj.x = lerp(from.x,to.x,ct.lt)
+		obj.y = lerp(from.y,to.y,ct.lt)
+	end, ct)
+end
 
 function _update()
 	clock.update()
@@ -225,21 +353,16 @@ end
 
 function _draw()
 	cls(7)
-	i = 0
-	pad = 8
-	cardw = 11
-	for card in all(phand) do
-		x = flr(64-(cardw*#phand+pad*(#phand-1))/2 + cardw*i + pad*i)+.5
-		off = card.disp == 10 and -3 or 1
-		print(card.disp,
-			x+off+cardw-5,
-			100,
-			card.color
-		)
-		spr(card.spr,x+2,100+7)
-		rect(x,100-2,x+cardw,100+13,5)
-		i += 1
-	end
+
+	-- draw deck
+	-- todo: make this oop?
+	rectfill(deck.x,deck.y-2,deck.x+cardw,deck.y+13,5)
+	rectfill(deck.x+1,deck.y-1,deck.x+cardw-1,deck.y+12,8)
+	rect(deck.x+2,deck.y,deck.x+cardw-2,deck.y+11,5)
+
+	anim_cont.draw()
+	phand.draw()
+	ehand.draw()
 end
 
 --helpers
