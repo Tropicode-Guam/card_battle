@@ -4,9 +4,20 @@ function init_hand(is_player, ncards)
 	local hand = {
 		is_player=is_player,
 		y=is_player and 100 or 27-cardh,
+		selected_i=nil,
 		cards={},
 		discarding={}
 	}
+	hand.select_dir = function(dir)
+		if not hand.selected_i then
+			hand.selected_i = flr(#hand.cards/2 + .5)
+			hand.cards[hand.selected_i].selected=true
+		else
+			hand.cards[hand.selected_i].selected=false
+			hand.selected_i = mid(1,hand.selected_i+dir,#hand.cards)
+			hand.cards[hand.selected_i].selected=true
+		end
+	end
 	hand.spot = function(i,hand_size)
 		hand_size=hand_size or #hand.cards
 		return {
@@ -128,6 +139,7 @@ function _init()
 			local card = {}
 			card = {
 				x=deck.x,y=deck.y,w=cardw,
+				selected=false,
 				disp=disp,
 				color=colors[suit],
 				spr=sprs[suit],
@@ -148,19 +160,22 @@ function _init()
                 dead = false,
 				draw=function()
 					local s = card
+					local y = s.y - (s.selected and 2 or 0)
+					local borderc = 5+(s.selected and 1 or 0)
+					line(s.x,s.y+12,s.x+cardw,s.y+12,13)
 					if s.facedown then
 						rectfill(s.x,s.y-2,s.x+cardw,s.y+13,5)
 						rectfill(s.x+1,s.y-1,s.x+cardw-1,s.y+12,8)
-						rect(s.x+2,s.y,s.x+cardw-2,s.y+11,5)
+						rect(s.x+2,s.y,s.x+cardw-2,s.y+11,borderc)
 					else
-						rectfill(s.x,s.y-2,s.x+s.w,s.y+13,7)
+						rectfill(s.x,y-2,s.x+s.w,y+13,7)
 						print(s.disp,
 							s.x+(s.disp == 10 and -3 or 1)+s.w-5,
-							s.y,
+							y,
 							s.color
 						)
-						spr(s.spr,s.x+2,s.y+7)
-						rect(s.x,s.y-2,s.x+s.w,s.y+13,5)
+						spr(s.spr,s.x+2,y+7)
+						rect(s.x,y-2,s.x+s.w,y+13,borderc)
 					end
 				end
 			}
@@ -221,6 +236,11 @@ function _init()
 			if c.interactable() then
 				if btnp(❎) then
 					mulligan(phand,deck)
+				end
+				if btnp(➡️) then
+					phand.select_dir(1)
+				elseif btnp(⬅️) then
+					phand.select_dir(-1)
 				end
 			end
 		end,
